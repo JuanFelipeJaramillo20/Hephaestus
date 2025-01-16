@@ -18,5 +18,5 @@ public class YamlRequest {
     private String testProjectPath; // Test project path
     private String cloudProvider; // Cloud provider (e.g., AWS, Azure, Google Cloud)
     private String deploymentType; // Deployment type (e.g., Lambda/Function)
-
+    private String language;
 }

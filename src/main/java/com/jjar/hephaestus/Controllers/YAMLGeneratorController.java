@@ -1,6 +1,7 @@
 package com.jjar.hephaestus.Controllers;
 
 import com.jjar.hephaestus.Dto.YamlRequest;
+import com.jjar.hephaestus.Dto.YamlResponse;
 import com.jjar.hephaestus.Entity.GeneratedFile;
 import com.jjar.hephaestus.Entity.User;
 import com.jjar.hephaestus.Service.GeneratedFileService;
@@ -18,17 +19,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/yaml")
 public class YAMLGeneratorController {
-
-    @Autowired
-    private Configuration freemarkerConfig;
-
-    @Autowired
-    private S3Service s3Service;
 
     @Autowired
     private UserService userService;
@@ -40,21 +38,26 @@ public class YAMLGeneratorController {
     private YAMLGeneratorService yamlGeneratorService;
 
     @PostMapping()
-    public ResponseEntity<byte[]> generateYAML(@RequestBody YamlRequest yamlRequest,
-                                               @RequestHeader(value = "Authorization", required = false) String token) {
+    public ResponseEntity<?> generateYAML(@RequestBody YamlRequest yamlRequest,
+                                          @RequestHeader(value = "Authorization", required = false) String token) {
         try {
-            byte[] yamlBytes = yamlGeneratorService.generateAndUploadYAML(yamlRequest, token);
+            YamlResponse yamlResponse = yamlGeneratorService.generateAndUploadYAML(yamlRequest, token, true);
 
             HttpHeaders headers = new HttpHeaders();
             headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" +
                     yamlRequest.getWorkflowName().replaceAll("\\s+", "_") + ".yaml");
-            headers.add(HttpHeaders.CONTENT_TYPE, "text/yaml");
+            headers.add(HttpHeaders.CONTENT_TYPE, "application/json");
 
-            return new ResponseEntity<>(yamlBytes, headers, HttpStatus.OK);
+            Map<String, Object> response = new HashMap<>();
+            response.put("yamlFile", Base64.getEncoder().encodeToString(yamlResponse.getYamlFile())); // Encode file in Base64
+            response.put("documentation", yamlResponse.getDocumentation());
+
+            return new ResponseEntity<>(response, headers, HttpStatus.OK);
         } catch (IOException | TemplateException e) {
             return new ResponseEntity<>(e.getMessage().getBytes(StandardCharsets.UTF_8), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     @GetMapping("/history")
